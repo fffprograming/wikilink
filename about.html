@@ -4,33 +4,49 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>遊び方・このサイトについて — WikiLinkGame</title>
+<meta name="description" content="WikiLinkGame の遊び方、ルール、問題の作り方、モードの違いなどを詳しく解説します。Wikipediaのリンク構造で遊ぶ無料クイズ。">
 <style>
   body { font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-         max-width: 640px; margin: 0 auto; padding: 32px 16px; color: #1c1e21;
+         max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; color: #1c1e21;
          line-height: 1.9; font-size: 15px; }
-  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; }
+  h1 { font-size: 22px; } h2 { font-size: 17px; margin-top: 32px; border-left: 4px solid #2f6fde; padding-left: 10px; }
   a { color: #2f6fde; }
+  nav { font-size: 13px; color: #74777c; border-bottom: 1px solid #e6e6e8; padding-bottom: 12px; margin-bottom: 20px; }
+  nav a { margin-right: 4px; }
   .ex { background: #f4f6f8; border-radius: 10px; padding: 14px 16px; font-size: 14px; }
+  footer { margin-top: 40px; font-size: 12px; color: #74777c; border-top: 1px solid #e6e6e8; padding-top: 16px; }
 </style>
 </head>
 <body>
+<nav>
+  <a href="./">▶ ゲームで遊ぶ</a> ・ <a href="about.html">遊び方</a> ・
+  <a href="faq.html">よくある質問</a> ・ <a href="columns.html">コラム</a> ・
+  <a href="privacy.html">プライバシー</a>
+</nav>
+
 <h1>WikiLinkGame の遊び方</h1>
-<p>WikiLinkGame は、Wikipedia の「リンクのつながり」で遊ぶクイズゲームです。お題の記事からリンクを <b>ちょうど2回</b> クリックしてたどり着ける記事を、4つの選択肢から当ててください。</p>
+<p>WikiLinkGame(ウィキリンクゲーム)は、日本語版 Wikipedia の記事どうしをつなぐ「リンクのつながり」で遊ぶ、無料のクイズゲームです。お題として1つの記事が提示されるので、その記事から本文中のリンクを <b>ちょうど2回</b> クリックしてたどり着ける記事はどれかを、4つの選択肢の中から当ててください。ブラウザさえあればインストール不要で、パソコンでもスマートフォンでもそのまま遊べます。</p>
 
 <h2>ルール</h2>
-<p>正解は、お題の記事のリンク先(1クリック)からさらにもう1回リンクをたどる(2クリック)と必ず到達できる記事です。残り3つの不正解には、1クリックでも2クリックでもたどり着けません。回答後に項目名をクリックすると、Wikipedia のページを開くことができます。</p>
+<p>正解は、お題の記事に書かれたリンクを1回たどり(=中継となる記事に移動し)、そこからさらにもう1回リンクをたどると必ず到達できる記事です。逆に、3つの不正解の選択肢は、お題の記事から1回でも2回でもたどり着くことができません。回答すると、正解が緑・不正解が赤で表示され、実際にどの中継記事を経由すればよいか(お題 → 中継記事 → 正解)の経路も示されます。</p>
+<div class="ex">たとえば「コーヒー」がお題のとき、「コーヒー」の記事から「ブラジル」へ、さらに「ブラジル」から「サッカーブラジル代表」へとリンクが張られていれば、「サッカーブラジル代表」が正解になり得ます。一見関係なさそうな2つの記事が、たった2ステップでつながっているのを発見するのがこのゲームの醍醐味です。</div>
 
-<div class="ex">例:「コーヒー」→(1クリック)「ブラジル」→(2クリック)「サッカーブラジル代表」。この場合「サッカーブラジル代表」が正解になります。</div>
+<h2>2つのモード</h2>
+<p><b>日替わり10問</b>は、日本時間の毎日0時に更新されます。その日はどのプレイヤーにも同じ10問が出題されるため、友だちや家族と同じ問題に挑戦してスコアを比べられます。結果は絵文字(🟩🟥)の並びとして X(旧Twitter)にシェアできます。<br>
+<b>ランダム10問</b>は、収録された4万問以上の中からその都度ランダムに出題されます。何度でも新しい問題に挑戦でき、遊ぶたびに違う組み合わせが楽しめます。ランダムには「問題ID」が付き、同じIDのURLを共有すれば、他の人にまったく同じ10問を出題することもできます。</p>
 
-<h2>モード</h2>
-<p>日替わり10問は、日本時間の毎日0時に更新され、その日はどのプレイヤーにも同じ10問が出題されます。ランダム10問は、収録された4万問以上からその都度ランダムに出題されます。どちらのモードでも、結果はXでシェアできます。</p>
+<h2>回答後は記事を読みに行けます</h2>
+<p>回答した後は、4つの選択肢のいずれをクリックしても、その記事の Wikipedia ページを新しいタブで開けます。「なぜこれが正解なのか」「この不正解はどんな記事なのか」を実際の記事で確かめられるので、遊びながら知らなかった事柄に出会えます。クイズをきっかけに Wikipedia を読み広げる、知的な寄り道を楽しんでください。</p>
+
+<h2>問題はどう作られているのか</h2>
+<p>本サイトの問題は、Wikipedia が公式に配布しているデータベース・ダンプ(記事本文のデータ)から自動生成しています。正解は「記事本文に実際に書かれているリンク」だけを使って2回でたどり着けることを機械的に検証しています。ナビゲーションボックスなど、本文を読んでいるだけでは気づきにくいテンプレート由来のリンクは、正解の判定には使いません。一方で不正解の選択肢は、そうしたテンプレート由来のリンクまで含めても2回以内では到達できないことを確認しています。つまり「本文を読んで正しくたどれば必ず正解でき、間違いの選択肢にはどうやっても届かない」ように作られています。</p>
 
 <h2>このサイトについて</h2>
-<p>本サイトのクイズは、日本語版 Wikipedia が公式に配布しているデータベース・ダンプから、記事同士のリンク関係(<a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja" target="_blank" rel="noopener">CC BY-SA 4.0</a>)を抽出して自動生成しています。Wikipedia は Wikimedia Foundation の商標であり、本サイトは同財団とは無関係です。Wikipedia を応援したい方は<a href="https://donate.wikimedia.org/?uselang=ja" target="_blank" rel="noopener">ウィキメディア財団への寄付</a>をご検討ください。詳しくは<a href="privacy.html">プライバシーポリシー</a>もご覧ください。</p>
+<p>WikiLinkGame は個人が趣味で運営している非営利的な無料サイトです。クイズの素材として日本語版 Wikipedia のデータ(<a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja" target="_blank" rel="noopener">CC BY-SA 4.0</a>)を利用しています。Wikipedia および Wikipedia のロゴは Wikimedia Foundation の商標であり、本サイトは同財団とは一切関係がなく、提携・承認を受けたものでもありません。日々更新される Wikipedia を応援したい方は、<a href="https://donate.wikimedia.org/?uselang=ja" target="_blank" rel="noopener">ウィキメディア財団への寄付</a>もご検討ください。</p>
 
-<p>運営者: fff<br>
-お問い合わせ: wwikilinkgame@gmail.com</p>
-
-<p><a href="./">← ゲームで遊ぶ</a></p>
+<footer>
+運営者: fff ・ お問い合わせ: wwikilinkgame@gmail.com<br>
+<a href="./">ゲームに戻る</a> ・ <a href="faq.html">よくある質問</a> ・ <a href="columns.html">コラム</a> ・ <a href="privacy.html">プライバシーポリシー</a>
+</footer>
 </body>
 </html>
