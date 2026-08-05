@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WikiLinkGame — リンクを2回たどるクイズ</title>
+<meta name="description" content="ある記事からリンクをちょうど2回クリックしてたどり着ける記事を当てる、Wikipediaのリンク構造で遊ぶ無料クイズ。毎日変わる日替わり10問も。">
+<meta property="og:title" content="WikiLinkGame — リンクを2回たどるクイズ">
+<meta property="og:description" content="リンクを2回クリックしてたどり着ける記事はどれ? 日替わり10問に挑戦!">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.wikilink-game.com/">
+<meta property="og:site_name" content="WikiLinkGame">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://www.wikilink-game.com/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"WikiLinkGame",
+"alternateName":"ウィキリンクゲーム","url":"https://www.wikilink-game.com/",
+"applicationCategory":"GameApplication","operatingSystem":"Web","inLanguage":"ja",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},
+"description":"ある記事からリンクをちょうど2回クリックしてたどり着ける記事を当てる、Wikipediaのリンク構造で遊ぶ無料クイズゲーム。"}
+</script>
+<style>
+  :root {
+    --bg: #fafafa; --card: #ffffff; --ink: #1c1e21; --sub: #74777c;
+    --accent: #2f6fde; --ok: #1a7f37; --ng: #c93c37; --line: #e6e6e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 22px 12px;
+  }
+  .app { width: 100%; max-width: 600px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: .01em; cursor: pointer; }
+  h1 .w { color: var(--accent); }
+  .score { font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; box-shadow: 0 1px 6px rgba(0,0,0,.04);
+  }
+  .qno { font-size: 12px; color: var(--sub); letter-spacing: .05em; margin-bottom: 8px; }
+  .qtext { font-size: 15px; line-height: 1.7; }
+  .start-title { font-size: 22px; font-weight: 700; margin: 8px 0 18px; }
+  .start-title a { color: inherit; text-decoration: none; border-bottom: 2px solid var(--accent); }
+  .choices { display: grid; gap: 10px; }
+  button { font: inherit; cursor: pointer; }
+  button.choice {
+    font-size: 15px; text-align: left; padding: 12px 14px;
+    border: 1.5px solid var(--line); border-radius: 10px; background: #fff;
+    transition: border-color .15s, background .15s;
+  }
+  button.choice:hover:not(:disabled) { border-color: var(--accent); background: #f4f8ff; }
+  button.choice:disabled { cursor: default; }
+  button.choice.correct { border-color: var(--ok); background: #eaf6ec; font-weight: 700; }
+  button.choice.wrong { border-color: var(--ng); background: #fbeeed; }
+  button.choice.answered { cursor: pointer; }
+  button.choice.answered::after { content: " \2197"; color: var(--sub); font-size: 12px; }
+  button.choice.answered:hover { border-color: var(--accent); }
+  .result { margin-top: 16px; font-size: 14px; line-height: 1.8; display: none; }
+  .result.show { display: block; }
+  .verdict { font-weight: 700; font-size: 16px; }
+  .verdict.ok { color: var(--ok); } .verdict.ng { color: var(--ng); }
+  .path { margin-top: 6px; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+  .path a { color: var(--accent); }
+  .note { color: var(--sub); font-size: 12px; margin-top: 8px; }
+  .btn {
+    margin-top: 16px; width: 100%; font-size: 15px; font-weight: 700;
+    padding: 12px; border: none; border-radius: 10px;
+    background: var(--accent); color: #fff; display: none;
+  }
+  .btn.show { display: block; }
+  .btn.sub { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn.x { background: #111; }
+  .home { text-align: center; }
+  .home p { color: var(--sub); font-size: 14px; line-height: 1.9; margin: 8px 0; }
+  .home .big { font-size: 38px; margin: 8px 0; font-variant-numeric: tabular-nums; display: inline-block; }
+  .grid { font-size: 22px; letter-spacing: 2px; margin: 6px 0; }
+  .cele-banner { font-weight: 700; font-size: 16px; margin: 8px 0 2px; }
+  .cele-3 .cele-banner { color: #0a9396; }
+  .cele-5 .cele-banner { color: var(--accent); }
+  .cele-7 .cele-banner { color: #1a7f37; }
+  .cele-8 .cele-banner { color: #e0457b; font-size: 17px; }
+  .cele-9 .cele-banner { color: #8b5cf6; font-size: 17px; }
+  .cele-perfect .cele-banner {
+    font-size: 20px; color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(90deg,#f5b301,#e0457b,#8b5cf6,#2f6fde,#1a7f37);
+    animation: hue 3s linear infinite;
+  }
+  .cele-8 .big, .cele-9 .big { text-shadow: 0 0 16px rgba(224,69,123,.45); }
+  .cele-perfect .big {
+    color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(90deg,#f5b301,#e0457b,#8b5cf6,#2f6fde);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+  @keyframes hue { 0% { filter: hue-rotate(0); } 100% { filter: hue-rotate(360deg); } }
+  .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 9999; }
+  .confetti { position: absolute; top: -14px; border-radius: 1px; opacity: .92; animation: fall linear forwards; }
+  @keyframes fall {
+    0% { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(112vh) rotate(720deg); opacity: .9; }
+  }
+  .modes { display: grid; gap: 10px; margin-top: 16px; }
+  .modes .btn { display: block; margin-top: 0; }
+  .daily-date { font-size: 12px; color: var(--sub); }
+  .adbox { width: 100%; max-width: 600px; margin-top: 18px; text-align: center; }
+  .adbox .adlabel { font-size: 10px; color: var(--sub); letter-spacing: .1em; display: block; margin-bottom: 4px; }
+  footer { margin-top: 18px; font-size: 11px; color: var(--sub); text-align: center; line-height: 1.9; max-width: 600px; }
+  footer a { color: var(--sub); }
+  footer .flinks a { color: var(--accent); margin: 0 2px; }
+  .static { width: 100%; max-width: 600px; margin-top: 26px; }
+  .static section { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; margin-bottom: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.04); }
+  .static h2 { font-size: 16px; margin: 0 0 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+  .static p, .static li { font-size: 14px; line-height: 1.9; }
+  .static p { margin: 8px 0; }
+  .static ul, .static ol { padding-left: 20px; margin: 8px 0; }
+  .static a { color: var(--accent); }
+  .static .ex { background: var(--bg); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.9; margin-top: 10px; }
+  .static .clist { list-style: none; padding-left: 0; }
+  .static .clist li { margin: 8px 0; }
+  .static .clist .cdesc { display: block; color: var(--sub); font-size: 12px; line-height: 1.7; }
+  .static .muted { color: var(--sub); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="logo"><span class="w">Wiki</span>LinkGame</h1>
+    <div class="score" id="score"></div>
+  </header>
+  <div class="card" id="card"></div>
+</div>
+<div class="adbox" id="adbox">
+  <span class="adlabel">広告</span>
+  <div id="ad">__AD_CODE__</div>
+</div>
+<div class="static">
+<section>
+<h2>WikiLinkGame とは</h2>
+<p>WikiLinkGame(ウィキリンクゲーム)は、日本語版 Wikipedia の記事どうしをつなぐ「リンク」を題材にした、無料で遊べるクイズゲームです。お題としてひとつの記事が提示されるので、その記事の本文中のリンクを <b>ちょうど2回</b> クリックしてたどり着ける記事を、4つの選択肢から選んでください。</p>
+<p>Wikipedia を読んでいて、気づけばリンクを次々にたどって、最初とはまるで違う話題の記事を読んでいた——そんな「知の寄り道」の楽しさを、1問数十秒のクイズに凝縮しました。会員登録もアプリのインストールも不要で、ブラウザだけでパソコンからもスマートフォンからも遊べます。</p>
+</section>
+<section>
+<h2>遊び方(3ステップ)</h2>
+<ol>
+<li>お題の記事名を見て、「この記事の本文には、どんな記事へのリンクがありそうか」を想像します。</li>
+<li>そこからさらにもう1回リンクをたどった先(=2クリック先)にありそうな記事を、4つの選択肢から1つ選びます。</li>
+<li>回答すると正解と実際の経路(お題 → 中継記事 → 正解)が表示されます。回答後は各選択肢をクリックすると Wikipedia の記事をそのまま読みに行けます。</li>
+</ol>
+<div class="ex"><b>例題:</b> お題が「コーヒー」のとき、本文のリンクから「ブラジル」へ移動し、「ブラジル」の本文から「サッカーブラジル代表」へ移動できるなら、「サッカーブラジル代表」は2クリックで到達できる記事=正解になり得ます。不正解の選択肢には、1回でも2回でもたどり着けないことを機械的に確認してあります。</div>
+<p>より詳しいルールは<a href="about.html">遊び方のページ</a>をご覧ください。</p>
+</section>
+<section>
+<h2>2つのモード</h2>
+<p><b>日替わり10問</b> — 日本時間の毎日0時に更新され、その日は全員に同じ10問が出題されます。結果は 🟩🟥 の並びで X(旧Twitter)にシェアできるので、友だちや家族とスコアを競えます。</p>
+<p><b>ランダム10問</b> — 収録された4万問以上からその都度出題されます。ランダムの結果には「問題ID」が付き、そのIDのURLを共有すると、他の人にまったく同じ10問を出題できます。</p>
+</section>
+<section>
+<h2>コラム — もっと楽しむための読みもの</h2>
+<ul class="clist">
+<li><a href="column-graph.html">このゲームが生まれるまで — グラフ理論と「6回のクリック」</a><span class="cdesc">運営者が大学院で研究したグラフ理論とスモールワールド性。開発の背景を綴ります。</span></li>
+<li><a href="column-hub.html">ハブ記事を意識すると強くなる — 攻略のコツ</a><span class="cdesc">国・年代・分野などの「ハブ記事」を経由点として考えると、正解が見えやすくなります。</span></li>
+<li><a href="column-2click.html">“2クリックの距離”に潜む面白さ</a><span class="cdesc">なぜ「ちょうど2回」なのか。リンク距離という考え方を紹介します。</span></li>
+<li><a href="column-howmade.html">問題ができるまで — ダンプデータから4万問が生まれる舞台裏</a><span class="cdesc">Wikipedia公式のダンプデータから問題を自動生成する仕組みを解説します。</span></li>
+<li><a href="column-sixdegrees.html">「六次の隔たり」を実験した人たち — 手紙からSNSまで</a><span class="cdesc">世界の狭さを確かめようとした実験の歴史をたどります。</span></li>
+<li><a href="column-choices.html">4択なのに難しいのはなぜ? — 出題のデザイン</a><span class="cdesc">正解率が意外と上がらない理由を、出題の作り方から考えます。</span></li>
+</ul>
+<p><a href="columns.html">▶ コラム一覧を見る(全10本)</a></p>
+</section>
+<section>
+<h2>よくある質問(抜粋)</h2>
+<p><b>Q. 料金はかかりますか?</b><br>完全無料です。会員登録も不要で、ブラウザで開くだけで遊べます。</p>
+<p><b>Q. 問題はどうやって作られていますか?</b><br>Wikipedia が公式に配布しているデータベース・ダンプ(記事本文のデータ)から自動生成し、正解へ2クリックで到達できること・不正解へは到達できないことを機械的に検証しています。</p>
+<p>そのほかの質問は<a href="faq.html">よくある質問(FAQ)</a>をご覧ください。</p>
+</section>
+<section>
+<h2>更新情報</h2>
+<p class="muted">2026-08 — コラムを6本追加し全10本に。トップページの解説を拡充。<br>
+2026-07 — サイト公開。日替わり10問・ランダム10問モードを搭載。収録4万問以上。</p>
+</section>
+</div>
+<footer>
+  <div class="flinks">
+    <a href="about.html">遊び方・このサイトについて</a> ・
+    <a href="faq.html">よくある質問</a> ・
+    <a href="columns.html">コラム</a> ・
+    <a href="privacy.html">プライバシーポリシー</a>
+  </div>
+  WikiLinkGame は日本語版Wikipedia(__DUMP__)の記事本文のリンク
+  (<a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja" target="_blank" rel="noopener">CC BY-SA 4.0</a>)を利用しています。<br>
+  Wikipedia は Wikimedia Foundation の商標です。本サイトは同財団とは無関係です。
+  <a href="https://donate.wikimedia.org/?uselang=ja" target="_blank" rel="noopener">Wikipedia への寄付はこちら</a><br>
+  運営者: Fujii(ふじい) ・ お問い合わせ: wwikilinkgame@gmail.com
+</footer>
+<script>
+const QUESTIONS = __QUESTIONS_JSON__;
+const META = __META_JSON__;
+const SITE_URL = "__SITE_URL__";
+const STATS_URL = "__STATS_URL__".replace(/\/+$/, "");
+const DAILY_N = 10;
+const RANDOM_N = 10;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function jstToday(now) {
+  const d = new Date((now === undefined ? Date.now() : now) + 9 * 3600 * 1000);
+  const p = (x) => String(x).padStart(2, "0");
+  return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate());
+}
+function shuffleBySeed(seedStr, n, total) {
+  const r = mulberry32(hashStr(seedStr));
+  const a = [...Array(total).keys()];
+  const k = Math.min(n, total);
+  for (let i = 0; i < k; i++) {
+    const j = i + Math.floor(r() * (total - i));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, k);
+}
+function dailyIndices(dateStr, n, total) { return shuffleBySeed("WikiLink:" + dateStr, n, total); }
+function randomIndices(seed, n, total) { return shuffleBySeed("WikiLinkR:" + seed, n, total); }
+function newSeed() {
+  return (Date.now().toString(36) + Math.random().toString(36).slice(2))
+    .replace(/[^0-9a-z]/g, "").slice(-6);
+}
+function siteBase() {
+  let b = SITE_URL;
+  if (!b && typeof location !== "undefined") b = location.origin + location.pathname;
+  return (b || "").replace(/\/+$/, "");
+}
+function celebrationTier(good) {
+  if (good >= 10) return { cls: "cele-perfect", msg: "🏆 全問正解！PERFECT！！", n: 170 };
+  if (good >= 9)  return { cls: "cele-9", msg: "🎉 あと一歩で満点！", n: 90 };
+  if (good >= 8)  return { cls: "cele-8", msg: "✨ 達人級！お見事！", n: 55 };
+  if (good >= 7)  return { cls: "cele-7", msg: "👏 7 問正解！すごい！", n: 28 };
+  if (good >= 5)  return { cls: "cele-5", msg: "🙂 半分以上正解！", n: 0 };
+  if (good >= 3)  return { cls: "cele-3", msg: "🎯 確率の壁を突破！", n: 0 };
+  return null;
+}
+function celePrefix(good) { const t = celebrationTier(good); return t ? t.msg + "\n" : ""; }
+function buildShareText(dateStr, good, total, marks) {
+  return celePrefix(good) + "WikiLinkGame\n" + dateStr + " 日替わり問題\n" +
+         marks.join("") + "\n挑戦する → " + siteBase();
+}
+function buildRandomShareText(seed, marks, good) {
+  const base = siteBase();
+  return celePrefix(good) + "WikiLinkGame\n" +
+         marks.join("") + "\n" +
+         "同じ問題を解く → " + base + "/?r=" + seed + "\n" +
+         "WikiLinkGame → " + base + "/";
+}
+if (typeof module !== "undefined") {
+  module.exports = { mulberry32, hashStr, jstToday, dailyIndices, randomIndices,
+                     newSeed, buildShareText, buildRandomShareText, celebrationTier,
+                     QUESTIONS, META, SITE_URL, STATS_URL, DAILY_N, RANDOM_N };
+}
+
+if (typeof document !== "undefined") {
+  const $ = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d.firstElementChild; };
+  const wikiURL = (t) => "https://ja.wikipedia.org/wiki/" + encodeURIComponent(t.replace(/ /g, "_"));
+  const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const card = document.getElementById("card");
+  const scoreEl = document.getElementById("score");
+  let st = null;
+
+  const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const dailyKey = (d) => "wikilink-daily-" + d;
+
+  function sendStat(q, hit, mode) {
+    if (!STATS_URL || !q.id) return;
+    try {
+      const body = JSON.stringify({ q: q.id, ok: hit ? 1 : 0, m: mode });
+      if (navigator.sendBeacon) navigator.sendBeacon(STATS_URL + "/hit", body);
+      else fetch(STATS_URL + "/hit", { method: "POST", body, keepalive: true }).catch(() => {});
+    } catch (e) {}
+  }
+
+  function confetti(count, big) {
+    document.querySelectorAll(".confetti-layer").forEach((e) => e.remove());
+    const layer = document.createElement("div");
+    layer.className = "confetti-layer";
+    document.body.appendChild(layer);
+    const colors = ["#2f6fde", "#1a7f37", "#f5b301", "#e0457b", "#8b5cf6", "#12b5c9"];
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement("span");
+      s.className = "confetti";
+      s.style.left = (Math.random() * 100) + "vw";
+      s.style.background = colors[i % colors.length];
+      s.style.animationDelay = (Math.random() * 0.8) + "s";
+      s.style.animationDuration = (2.4 + Math.random() * 1.8) + "s";
+      const w = (big ? 8 : 6) + Math.random() * (big ? 10 : 6);
+      s.style.width = w + "px";
+      s.style.height = (w * 0.5) + "px";
+      layer.appendChild(s);
+    }
+    setTimeout(() => layer.remove(), 6500);
+  }
+
+  function celebrate(container, good) {
+    const t = celebrationTier(good);
+    if (!t) return;
+    container.classList.add(t.cls);
+    const b = document.createElement("div");
+    b.className = "cele-banner";
+    b.textContent = t.msg;
+    container.appendChild(b);
+    if (t.n > 0) confetti(t.n, good >= 10);
+  }
+
+  function home() {
+    st = null;
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    const today = jstToday();
+    const done = lsGet(dailyKey(today));
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>ある記事からリンクを <b>ちょうど2回</b> クリックしてたどり着ける記事を当てるクイズ。<br>不正解の選択肢には、1回でも2回でもたどり着けません。</p>`));
+    const modes = $(`<div class="modes"></div>`);
+    const db = $(`<button class="btn show">${done ? "今日の結果を見る" : `今日の${DAILY_N}問(日替わり)`}<br><span class="daily-date">${today} ・ 毎日0時(日本時間)更新</span></button>`);
+    db.onclick = () => done ? dailyResult(today, done.g, done.m) : startDaily();
+    const rb = $(`<button class="btn sub show">ランダム${RANDOM_N}問</button>`);
+    rb.onclick = () => startRandom();
+    modes.appendChild(db);
+    modes.appendChild(rb);
+    h.appendChild(modes);
+    h.appendChild($(`<p style="font-size:12px">全 ${QUESTIONS.length.toLocaleString()} 問収録 ・ 完全無料</p>`));
+    h.appendChild($(`<p style="font-size:12px"><a href="about.html" style="color:#2f6fde">遊び方</a> ・ <a href="faq.html" style="color:#2f6fde">よくある質問</a> ・ <a href="columns.html" style="color:#2f6fde">コラム</a></p>`));
+    card.appendChild(h);
+  }
+
+  function startDaily() {
+    const d = jstToday();
+    st = { mode: "daily", order: dailyIndices(d, DAILY_N, QUESTIONS.length),
+           pos: 0, good: 0, marks: [], date: d };
+    render();
+  }
+  function startRandom(seed) {
+    seed = seed || newSeed();
+    st = { mode: "random", seed: seed,
+           order: randomIndices(seed, RANDOM_N, QUESTIONS.length),
+           pos: 0, good: 0, marks: [] };
+    render();
+  }
+
+  function render() {
+    if (st.pos >= st.order.length) return finish();
+    const q = QUESTIONS[st.order[st.pos]];
+    scoreEl.textContent = (st.mode === "daily" ? "日替わり " + st.date + " ・ " : "問題ID " + st.seed + " ・ ") +
+      "正解 " + st.good + " / " + st.pos;
+    card.innerHTML = "";
+    card.appendChild($(`<div class="qno">第 ${st.pos + 1} 問 / ${st.order.length}</div>`));
+    card.appendChild($(`<div class="qtext">次の記事からリンクを <b>ちょうど2回</b> クリックしてたどり着けるのは?</div>`));
+    card.appendChild($(`<div class="start-title"><a href="${wikiURL(q.s)}" target="_blank" rel="noopener">${esc(q.s)}</a></div>`));
+    const box = $(`<div class="choices"></div>`);
+    const result = $(`<div class="result"></div>`);
+    const next = $(`<button class="btn">${st.pos + 1 < st.order.length ? "次の問題へ" : "結果を見る"}</button>`);
+    next.onclick = () => { st.pos++; render(); };
+    let answered = false;
+    q.c.forEach((t, i) => {
+      const b = $(`<button class="choice">${esc(t)}</button>`);
+      b.onclick = () => {
+        if (answered) { window.open(wikiURL(t), "_blank", "noopener"); return; }
+        answered = true;
+        const hit = i === q.a;
+        if (hit) st.good++;
+        st.marks.push(hit ? "🟩" : "🟥");
+        sendStat(q, hit, st.mode);
+        box.querySelectorAll("button").forEach((x, j) => {
+          x.classList.add("answered");
+          x.title = "Wikipediaで開く";
+          if (j === q.a) x.classList.add("correct");
+          else if (j === i) x.classList.add("wrong");
+        });
+        result.innerHTML =
+          `<div class="verdict ${hit ? "ok" : "ng"}">${hit ? "正解!" : "残念…"}</div>` +
+          `<div class="path">経路: <a href="${wikiURL(q.s)}" target="_blank" rel="noopener">${esc(q.s)}</a>` +
+          ` → <a href="${wikiURL(q.via)}" target="_blank" rel="noopener">${esc(q.via)}</a>` +
+          ` → <a href="${wikiURL(q.c[q.a])}" target="_blank" rel="noopener">${esc(q.c[q.a])}</a></div>` +
+          `<div class="note">選択肢をクリックすると各記事をWikipediaで開けます。他の選択肢へは、スナップショット時点では1〜2クリックでは到達できません。</div>`;
+        result.classList.add("show");
+        next.classList.add("show");
+        scoreEl.textContent = (st.mode === "daily" ? "日替わり " + st.date + " ・ " : "問題ID " + st.seed + " ・ ") +
+          "正解 " + st.good + " / " + (st.pos + 1);
+      };
+      box.appendChild(b);
+    });
+    card.appendChild(box);
+    card.appendChild(result);
+    card.appendChild(next);
+  }
+
+  function finish() {
+    if (st.mode === "daily") {
+      lsSet(dailyKey(st.date), { g: st.good, m: st.marks });
+      dailyResult(st.date, st.good, st.marks);
+    } else {
+      randomResult();
+    }
+  }
+
+  function dailyResult(date, good, marks) {
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>日替わり ${date} の結果</p>`));
+    h.appendChild($(`<div class="big">${good} / ${marks.length}</div>`));
+    h.appendChild($(`<div class="grid">${marks.join("")}</div>`));
+    celebrate(h, good);
+    const share = $(`<button class="btn x show">X で結果をシェア</button>`);
+    share.onclick = () => {
+      const text = buildShareText(date, good, marks.length, marks);
+      window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank", "noopener");
+    };
+    const rb = $(`<button class="btn sub show">ランダム${RANDOM_N}問で遊ぶ</button>`);
+    rb.onclick = () => startRandom();
+    const hb = $(`<button class="btn sub show">ホームへ</button>`);
+    hb.onclick = home;
+    h.appendChild(share);
+    h.appendChild(rb);
+    h.appendChild(hb);
+    h.appendChild($(`<p style="font-size:12px">明日の0時(日本時間)に新しい${DAILY_N}問が出ます</p>`));
+    card.appendChild(h);
+  }
+
+  function randomResult() {
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>ランダム${RANDOM_N}問の結果</p>`));
+    h.appendChild($(`<div class="big">${st.good} / ${st.order.length}</div>`));
+    h.appendChild($(`<div class="grid">${st.marks.join("")}</div>`));
+    celebrate(h, st.good);
+    h.appendChild($(`<p style="font-size:12px">問題ID: <b>${esc(st.seed)}</b>(同じIDで他の人も同じ10問を解けます)</p>`));
+    const share = $(`<button class="btn x show">X で結果をシェア</button>`);
+    share.onclick = () => {
+      const text = buildRandomShareText(st.seed, st.marks, st.good);
+      window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank", "noopener");
+    };
+    const again = $(`<button class="btn sub show">新しくランダム${RANDOM_N}問</button>`);
+    again.onclick = () => startRandom();
+    const hb = $(`<button class="btn sub show">ホームへ</button>`);
+    hb.onclick = home;
+    h.appendChild(share);
+    h.appendChild(again);
+    h.appendChild(hb);
+    card.appendChild(h);
+  }
+
+  document.getElementById("logo").onclick = home;
+  const adEl = document.getElementById("ad");
+  if (!adEl.innerHTML.trim()) {
+    document.getElementById("adbox").style.display = "none";
+  }
+  const rseed = (new URLSearchParams(location.search).get("r") || "")
+    .toLowerCase().replace(/[^0-9a-z]/g, "").slice(0, 16);
+  if (rseed) startRandom(rseed); else home();
+}
+</script>
+</body>
+</html>

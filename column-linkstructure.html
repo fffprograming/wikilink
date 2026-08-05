@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>リンクは知識の地図 — Wikipediaのリンク構造をのぞいてみる — WikiLinkGame コラム</title>
+<meta name="description" content="Wikipediaのリンクは、どの記事にも同じように張られているわけではありません。リンクが多い記事と少ない記事、入るリンクと出るリンクの非対称性など、リンク構造の面白さを紹介します。">
+<link rel="canonical" href="https://www.wikilink-game.com/column-linkstructure.html">
+<style>
+  body { font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+         max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; color: #1c1e21;
+         line-height: 2.0; font-size: 15px; }
+  h1 { font-size: 21px; line-height: 1.5; }
+  h2 { font-size: 16px; margin-top: 28px; }
+  a { color: #2f6fde; }
+  nav { font-size: 13px; color: #74777c; border-bottom: 1px solid #e6e6e8; padding-bottom: 12px; margin-bottom: 20px; }
+  nav a { margin-right: 4px; }
+  footer { margin-top: 40px; font-size: 12px; color: #74777c; border-top: 1px solid #e6e6e8; padding-top: 16px; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="./">▶ ゲームで遊ぶ</a> ・ <a href="about.html">遊び方</a> ・
+  <a href="faq.html">よくある質問</a> ・ <a href="columns.html">コラム</a> ・
+  <a href="privacy.html">プライバシー</a>
+</nav>
+
+<h1>リンクは知識の地図<br>— Wikipediaのリンク構造をのぞいてみる</h1>
+
+<p>WikiLinkGame の題材である Wikipedia のリンクは、よく見るとかなり個性的な「地形」をしています。どの記事も同じようにつながっているわけではなく、リンクが集中する場所もあれば、ほとんど孤立した場所もあります。この地形を知っておくと、ゲームの見え方も変わってきます。今回は、Wikipedia のリンク構造の面白いところをいくつか紹介します。</p>
+
+<h2>リンクには「向き」がある</h2>
+<p>まず基本から。Wikipedia のリンクには向きがあります。記事Aの本文に記事Bへのリンクがあっても、BからAへのリンクがあるとは限りません。たとえば、ある俳優の記事は出演した映画の記事にリンクしていても、その映画の記事には共演者が多すぎて、その俳優の名前が本文に出てこないかもしれません。行きは1クリックなのに、帰りは何クリックもかかる——リンクの世界では、こうした「一方通行」が当たり前に起こります。WikiLinkGame の正解判定も、この向きを正確に扱っています。お題から選択肢への向きで2クリック、が条件です。</p>
+
+<h2>リンクの数は驚くほど不平等</h2>
+<p>次に、リンクの「数」です。記事が持つリンクの数を調べると、極端な偏りが見つかります。大部分の記事は数十本程度のリンクしか持たない一方で、ごく一部の記事には桁違いの数のリンクが集まります。「日本」「アメリカ合衆国」のような国の記事、年の記事、大都市の記事などは、何十万という記事から参照される巨大な結節点です。こうした偏りは、少数のハブが全体を支える構造として、Web全体やSNS、航空路線網など多くのネットワークに共通して見られます。Wikipedia のリンク網は、世の中のネットワークの縮図でもあるのです。ハブをゲームの攻略にどう活かすかは、<a href="column-hub.html">こちらのコラム</a>で紹介しています。</p>
+
+<h2>本文のリンクは「編集者の判断」の集積</h2>
+<p>もうひとつ、見落とされがちな点があります。Wikipedia のリンクは機械が張っているのではなく、<b>人間の編集者が「この言葉は読者が調べたくなるはずだ」と判断して張っている</b>ということです。どの言葉をリンクにするかには、書き手の感覚やコミュニティの慣習(初出のみリンクする、ありふれた一般名詞はリンクしない、など)が反映されます。つまりリンク構造は、無機質なデータではなく、無数の編集者の判断が積み重なってできた「知識の地図」です。WikiLinkGame で「意味は近いのにリンクでは遠い」という現象が起きるのも、地図が人の手で描かれているからです(<a href="column-choices.html">このゲームが難しい理由</a>も参照)。</p>
+
+<h2>2クリックで地図を歩く</h2>
+<p>この地図の上を、お題から2歩だけ歩く——それが WikiLinkGame です。1歩目でハブに乗れば行き先は一気に広がり、マイナーな記事に踏み込めば道は細くなる。遊びながら、「この記事はどれくらいのハブだろう」「どっち向きのリンクだろう」と考えるようになったら、あなたはもうリンク構造の面白さに気づき始めています。答え合わせのあとは、ぜひ実際の記事でリンクの張られ方を観察してみてください。知識の地図は、歩いた人にだけ地形を見せてくれます。</p>
+
+<p style="margin-top:28px"><a href="./">▶ 今日の10問に挑戦する</a> / <a href="columns.html">ほかのコラムを読む</a></p>
+
+<footer>
+運営者: Fujii(ふじい) ・ お問い合わせ: wwikilinkgame@gmail.com<br>
+<a href="./">ゲームに戻る</a> ・ <a href="columns.html">コラム一覧</a>
+</footer>
+</body>
+</html>
