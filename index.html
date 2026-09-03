@@ -282,9 +282,40 @@ function buildRandomShareText(seed, marks, good) {
          "同じ問題を解く → " + base + "/?r=" + seed + "\n" +
          "WikiLinkGame → " + base + "/";
 }
+// --- サドンデスモード ---
+// /easy が返す行(q:問題ID, s:回答数, r:正答率%)のうち、現在の問題バンクに
+// 存在するものへ絞り、正答率上位10%(最低5問)をプールにする
+function buildSuddenPool(rows, hasQid) {
+  const ok = (rows || []).filter((x) => x && hasQid(x.q));
+  ok.sort((a, b) => (b.r - a.r) || (b.s - a.s));
+  const n = Math.max(5, Math.ceil(ok.length * 0.10));
+  return ok.slice(0, n);
+}
+// 正解した各問の正答率(%)を掛け合わせた「生存確率」(%)
+function survivalPct(rates) {
+  let p = 100;
+  for (let i = 0; i < rates.length; i++) p = (p * rates[i]) / 100;
+  return p;
+}
+function fmtPct(p) {
+  if (p >= 10) return Math.round(p) + "%";
+  if (p >= 1) return p.toFixed(1) + "%";
+  if (p >= 0.1) return p.toFixed(2) + "%";
+  if (p >= 0.001) return p.toFixed(3) + "%";
+  return "0.001%未満";
+}
+function buildSuddenShareText(n, pct, cleared) {
+  const base = siteBase();
+  let t = "🔥 WikiLinkGame サドンデス\n";
+  if (cleared) t += "出題プール全問制覇!! ";
+  t += n + "問連続正解";
+  if (n >= 1) t += "(みんなの正解率から見た生存確率 " + fmtPct(pct) + ")";
+  return t + "\n挑戦する → " + base + "/";
+}
 if (typeof module !== "undefined") {
   module.exports = { mulberry32, hashStr, jstToday, dailyIndices, randomIndices,
                      newSeed, buildShareText, buildRandomShareText, celebrationTier,
+                     buildSuddenPool, survivalPct, fmtPct, buildSuddenShareText,
                      QUESTIONS, META, SITE_URL, STATS_URL, DAILY_N, RANDOM_N };
 }
 
@@ -354,8 +385,11 @@ if (typeof document !== "undefined") {
     db.onclick = () => done ? dailyResult(today, done.g, done.m) : startDaily();
     const rb = $(`<button class="btn sub show">ランダム${RANDOM_N}問</button>`);
     rb.onclick = () => startRandom();
+    const sb = $(`<button class="btn sub show">🔥 サドンデス<br><span class="daily-date">みんなの正解率が高い問題だけ ・ 間違えたら即終了</span></button>`);
+    sb.onclick = () => startSudden();
     modes.appendChild(db);
     modes.appendChild(rb);
+    modes.appendChild(sb);
     h.appendChild(modes);
     h.appendChild($(`<p style="font-size:12px">全 ${QUESTIONS.length.toLocaleString()} 問収録 ・ 完全無料</p>`));
     h.appendChild($(`<p style="font-size:12px"><a href="about.html" style="color:#2f6fde">遊び方</a> ・ <a href="faq.html" style="color:#2f6fde">よくある質問</a> ・ <a href="columns.html" style="color:#2f6fde">コラム</a></p>`));
@@ -374,6 +408,134 @@ if (typeof document !== "undefined") {
            order: randomIndices(seed, RANDOM_N, QUESTIONS.length),
            pos: 0, good: 0, marks: [] };
     render();
+  }
+
+  // --- サドンデスモード ---
+  let qidIndex = null;
+  function qidMap() {
+    if (!qidIndex) {
+      qidIndex = new Map();
+      QUESTIONS.forEach((q, i) => { if (q.id) qidIndex.set(q.id, i); });
+    }
+    return qidIndex;
+  }
+
+  function startSudden() {
+    st = null;
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    card.appendChild($(`<div class="home"><p>サドンデスの問題を準備中…</p></div>`));
+    if (!STATS_URL) { suddenUnavailable(); return; }
+    fetch(STATS_URL + "/easy")
+      .then((r) => r.json())
+      .then((data) => {
+        const pool = buildSuddenPool(data.rows, (q) => qidMap().has(q));
+        if (pool.length < 5) { suddenUnavailable(); return; }
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        st = { mode: "sudden", pool: pool, pos: 0, rates: [] };
+        renderSudden();
+      })
+      .catch(() => suddenUnavailable());
+  }
+
+  function suddenUnavailable() {
+    st = null;
+    card.innerHTML = "";
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>サドンデスは、みんなの回答データが集まると遊べるようになります。<br>まずは日替わり・ランダムで遊んでみてください。</p>`));
+    const hb = $(`<button class="btn show">ホームへ</button>`);
+    hb.onclick = home;
+    h.appendChild(hb);
+    card.appendChild(h);
+  }
+
+  function renderSudden() {
+    if (st.pos >= st.pool.length) return endSudden(true);
+    const entry = st.pool[st.pos];
+    const q = QUESTIONS[entry.idx !== undefined ? entry.idx : qidMap().get(entry.q)];
+    scoreEl.textContent = "🔥 サドンデス ・ 連続正解 " + st.rates.length;
+    card.innerHTML = "";
+    card.appendChild($(`<div class="qno">第 ${st.pos + 1} 問 ・ みんなの正解率 <b>${entry.r}%</b>(回答 ${entry.s}件)</div>`));
+    card.appendChild($(`<div class="qtext">次の記事からリンクを <b>ちょうど2回</b> クリックしてたどり着けるのは? <b>間違えたら終了!</b></div>`));
+    card.appendChild($(`<div class="start-title"><a href="${wikiURL(q.s)}" target="_blank" rel="noopener">${esc(q.s)}</a></div>`));
+    const box = $(`<div class="choices"></div>`);
+    const result = $(`<div class="result"></div>`);
+    const next = $(`<button class="btn"></button>`);
+    let answered = false;
+    q.c.forEach((t, i) => {
+      const b = $(`<button class="choice">${esc(t)}</button>`);
+      b.onclick = () => {
+        if (answered) { window.open(wikiURL(t), "_blank", "noopener"); return; }
+        answered = true;
+        const hit = i === q.a;
+        sendStat(q, hit, "sudden");
+        box.querySelectorAll("button").forEach((x, j) => {
+          x.classList.add("answered");
+          x.title = "Wikipediaで開く";
+          if (j === q.a) x.classList.add("correct");
+          else if (j === i) x.classList.add("wrong");
+        });
+        result.innerHTML =
+          `<div class="verdict ${hit ? "ok" : "ng"}">${hit ? "正解! 続行!" : "残念! ここまで!"}</div>` +
+          `<div class="path">経路: <a href="${wikiURL(q.s)}" target="_blank" rel="noopener">${esc(q.s)}</a>` +
+          ` → <a href="${wikiURL(q.via)}" target="_blank" rel="noopener">${esc(q.via)}</a>` +
+          ` → <a href="${wikiURL(q.c[q.a])}" target="_blank" rel="noopener">${esc(q.c[q.a])}</a></div>` +
+          `<div class="note">選択肢をクリックすると各記事をWikipediaで開けます。</div>`;
+        result.classList.add("show");
+        if (hit) {
+          st.rates.push(entry.r);
+          scoreEl.textContent = "🔥 サドンデス ・ 連続正解 " + st.rates.length;
+          next.textContent = "次の問題へ";
+          next.onclick = () => { st.pos++; renderSudden(); };
+        } else {
+          next.textContent = "結果を見る";
+          next.onclick = () => endSudden(false);
+        }
+        next.classList.add("show");
+      };
+      box.appendChild(b);
+    });
+    card.appendChild(box);
+    card.appendChild(result);
+    card.appendChild(next);
+  }
+
+  function endSudden(cleared) {
+    const n = st.rates.length;
+    const p = survivalPct(st.rates);
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>🔥 サドンデス${cleared ? " ・ 出題プール全問制覇!!" : " の結果"}</p>`));
+    h.appendChild($(`<div class="big">${n}問連続正解</div>`));
+    if (n >= 1) {
+      h.appendChild($(`<p>みんなの正解率をもとにすると、ここまで生き残れる確率は<br><b style="font-size:22px">${fmtPct(p)}</b> でした</p>`));
+    }
+    if (n >= 2) {
+      h.classList.add(n >= 10 ? "cele-perfect" : n >= 5 ? "cele-8" : "cele-7");
+      const b = document.createElement("div");
+      b.className = "cele-banner";
+      b.textContent = n >= 10 ? "🏆 伝説級の生存力!!" :
+                      n >= 5 ? "✨ 見事なサバイバル!" : "🎉 " + n + "連勝おめでとう!";
+      h.appendChild(b);
+      confetti(Math.min(40 + n * 15, 170), n >= 8);
+    }
+    const share = $(`<button class="btn x show">X で結果をシェア</button>`);
+    share.onclick = () => {
+      const text = buildSuddenShareText(n, p, cleared);
+      window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank", "noopener");
+    };
+    const again = $(`<button class="btn sub show">もう1回チャレンジ</button>`);
+    again.onclick = () => startSudden();
+    const hb = $(`<button class="btn sub show">ホームへ</button>`);
+    hb.onclick = home;
+    h.appendChild(share);
+    h.appendChild(again);
+    h.appendChild(hb);
+    card.appendChild(h);
   }
 
   function render() {
