@@ -617,90 +617,11 @@ if (typeof document !== "undefined") {
     loadSuddenRank(rankbox, n);
   }
 
-  // TOP5ランキングを画像(PNG)に描画する。自分の行は太字+ハイライト。
-  // 端末シェア用。返り値は Promise<Blob>。
-  function makeRankImageBlob(rows, myName, myScore, stamp) {
-    const W = 640, H = 460, DPR = 2;
-    const cv = document.createElement("canvas");
-    cv.width = W * DPR; cv.height = H * DPR;
-    const g = cv.getContext("2d");
-    g.scale(DPR, DPR);
-    const JP = '"Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP",sans-serif';
-    // 背景
-    g.fillStyle = "#fffdf3"; g.fillRect(0, 0, W, H);
-    g.fillStyle = "#2f6fde"; g.fillRect(0, 0, W, 8);
-    // タイトル
-    g.fillStyle = "#1c1e21"; g.textBaseline = "middle";
-    g.font = "bold 30px " + JP; g.textAlign = "center";
-    g.fillText("WikiLinkGame サドンデス", W / 2, 52);
-    g.font = "bold 22px " + JP; g.fillStyle = "#c0392b";
-    g.fillText("🏆 本日のTOP5", W / 2, 90);
-    // 5行
-    const rowH = 56, top = 122, left = 40, right = W - 40;
-    for (let i = 0; i < 5; i++) {
-      const r = rows[i];
-      const y = top + i * rowH;
-      const mine = r && r.name === myName && r.score === myScore;
-      if (mine) {
-        g.fillStyle = "#fff0b8";
-        g.beginPath();
-        (g.roundRect ? g.roundRect(left - 8, y + 4, right - left + 16, rowH - 8, 10)
-                     : g.rect(left - 8, y + 4, right - left + 16, rowH - 8));
-        g.fill();
-      }
-      const rank = r ? rankOf(rows, r.score) : (i + 1);
-      const name = r ? String(r.name) : "-";
-      const score = r ? r.score : 0;
-      g.textAlign = "left";
-      g.font = (mine ? "bold " : "") + "26px " + JP;
-      g.fillStyle = mine ? "#b8860b" : (r ? "#1c1e21" : "#aaa");
-      g.fillText(rank + "位", left, y + rowH / 2);
-      g.font = (mine ? "bold " : "") + "26px " + JP;
-      g.fillStyle = mine ? "#1c1e21" : (r ? "#1c1e21" : "#aaa");
-      g.fillText(name, left + 90, y + rowH / 2);
-      g.textAlign = "right";
-      g.font = (mine ? "bold " : "") + "26px " + JP;
-      g.fillText(String(score), right, y + rowH / 2);
-    }
-    // フッター
-    g.textAlign = "center"; g.fillStyle = "#74777c"; g.font = "16px " + JP;
-    g.fillText((stamp || "") + " 時点  ・  www.wikilink-game.com", W / 2, H - 24);
-    return new Promise((resolve) => cv.toBlob(resolve, "image/png"));
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-
-  // サドンデス結果のシェア。登録済み(rankRowsあり)なら画像付きを試みる。
-  async function shareSudden() {
+  // サドンデス結果のシェア(テキストのみ。画像添付はしない)。
+  function shareSudden() {
     const text = buildSuddenShareText(st.score, st.rank);
-    const intent = "https://twitter.com/intent/tweet?text=";
-    // 画像を作れるのは「ランクインして名前を登録した人」だけ
-    if (st.rankRows && st.rankRows.length && st.myName != null) {
-      try {
-        const blob = st.shareBlob ||
-          await makeRankImageBlob(st.rankRows, st.myName, st.myScore, st.rankStamp);
-        const file = new File([blob], "wikilinkgame-top5.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text: text });
-          return;
-        }
-        // 端末が画像共有に非対応(主にPC): 画像を保存して手動添付を案内
-        downloadBlob(blob, "wikilinkgame-top5.png");
-        window.open(intent + encodeURIComponent(text +
-          "\n(保存されたランキング画像を添付してね)"), "_blank", "noopener");
-        return;
-      } catch (e) {
-        if (e && e.name === "AbortError") return;  // ユーザーが共有をキャンセル
-        // 画像生成に失敗したらテキストのみにフォールバック
-      }
-    }
-    window.open(intent + encodeURIComponent(text), "_blank", "noopener");
+    window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text),
+                "_blank", "noopener");
   }
 
   // 同率順位(競技ランキング方式): 自分より高いスコアの人数 + 1。
@@ -713,12 +634,14 @@ if (typeof document !== "undefined") {
   }
 
   function renderRankRows(el, rows, meName, meScore) {
-    // 常に5行を描画する(不足分は「-」「0」のプレースホルダーで埋める)。
-    // これにより読み込み前後で枠の高さが一切変わらない。
+    // 5位が同率で複数いる場合は全員表示する(サーバーが同率分も返す)。
+    // 行数が5未満のときは「-」「0」のプレースホルダーで5行分の高さを確保し、
+    // 読み込み前後で枠が縮まないようにする(同率で5行を超える分はそのまま伸びる)。
     rows = rows || [];
     let marked = false;
     let html = "";
-    for (let i = 0; i < 5; i++) {
+    const n = Math.max(5, rows.length);
+    for (let i = 0; i < n; i++) {
       const r = rows[i];
       if (r) {
         const me = !marked && meName !== undefined && r.name === meName && r.score === meScore;
@@ -740,8 +663,9 @@ if (typeof document !== "undefined") {
     fetch(STATS_URL + "/rank").then((r) => r.json()).then((data) => {
       const rows = data.rows || [];
       renderRankRows(el, rows);
+      // 5位と同点なら同率でランクインできるよう「以上」で判定する
       const qualifies = score >= 1 &&
-        (rows.length < 5 || score > rows[rows.length - 1].score);
+        (rows.length < 5 || score >= rows[rows.length - 1].score);
       if (!qualifies) {
         form.innerHTML = '<div class="rb-note">TOP5入りで名前を登録できます。<br>もう1回チャレンジ!</div>';
         return;
@@ -765,13 +689,6 @@ if (typeof document !== "undefined") {
             const inTop = rows.some((x) => x.name === name && x.score === score);
             const myRank = inTop ? rankOf(rows, score) : (res.rank || null);
             st.rank = myRank;
-            // シェア用にTOP5・自分の情報を保存し、画像を先に生成しておく
-            if (st.mode === "sudden" && inTop) {
-              st.rankRows = rows; st.myName = name; st.myScore = score;
-              st.rankStamp = jstStamp();
-              makeRankImageBlob(rows, name, score, st.rankStamp)
-                .then((blob) => { st.shareBlob = blob; }).catch(() => {});
-            }
             form.innerHTML = myRank
               ? `<b>🎊 本日 ${myRank} 位にランクイン!</b>`
               : "登録しました!";
