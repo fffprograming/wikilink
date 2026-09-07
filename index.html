@@ -108,11 +108,18 @@
   .rankbox { margin: 16px auto 4px; max-width: 340px; text-align: left;
     border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; background: #fffdf3; }
   .rankbox .rb-title { font-weight: 700; font-size: 14px; text-align: center; margin-bottom: 8px; }
-  .rankbox .rb-row { display: flex; justify-content: space-between; gap: 8px;
-    font-size: 14px; padding: 3px 4px; font-variant-numeric: tabular-nums; }
+  /* 5行ぶんの高さを常に確保し、読み込み後も枠が伸縮しないようにする */
+  .rankbox .rb-body { min-height: 160px; }
+  .rankbox .rb-row { display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    height: 28px; box-sizing: border-box; font-size: 14px; padding: 3px 4px; font-variant-numeric: tabular-nums; }
   .rankbox .rb-row.me { background: #fff3c4; border-radius: 6px; }
+  .rankbox .rb-row .rb-nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; }
+  .rankbox .rb-row.ph { color: var(--sub); }
   .rankbox .rb-empty { color: var(--sub); font-size: 13px; text-align: center; }
-  .rb-entry { margin-top: 10px; font-size: 13px; text-align: center; }
+  /* 登録欄の領域も常に確保し、フェッチ後に出現してもボタンがずれないようにする */
+  .rb-entry { min-height: 148px; margin-top: 10px; font-size: 13px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .rb-entry .rb-note { color: var(--sub); }
   .namein { font: inherit; margin-top: 6px; padding: 8px 10px; border: 1.5px solid var(--line);
     border-radius: 8px; width: 9em; text-align: center; }
   .adbox { width: 100%; max-width: 600px; margin-top: 18px; text-align: center; }
@@ -493,7 +500,9 @@ if (typeof document !== "undefined") {
     b.textContent = suddenComment(n);
     h.appendChild(b);
     if (n >= 3) confetti(Math.min(30 + n * 12, 170), n >= 10);
-    const rankbox = $(`<div class="rankbox"><div class="rb-title">🏆 本日のランキング TOP5(24時リセット)</div><div class="rb-body">読み込み中…</div></div>`);
+    const rankbox = $(`<div class="rankbox"><div class="rb-title">🏆 本日のランキング TOP5(24時リセット)</div><div class="rb-body"></div><div class="rb-entry"></div></div>`);
+    // 読み込み前から1〜5位の枠(名前「-」・0)を描画し、高さを固定しておく
+    renderRankRows(rankbox.querySelector(".rb-body"), []);
     h.appendChild(rankbox);
     const share = $(`<button class="btn x show">X で結果をシェア</button>`);
     share.onclick = () => {
@@ -512,28 +521,40 @@ if (typeof document !== "undefined") {
   }
 
   function renderRankRows(el, rows, meName, meScore) {
-    if (!rows || !rows.length) {
-      el.innerHTML = '<div class="rb-empty">まだ記録がありません。初代1位のチャンス!</div>';
-      return;
-    }
+    // 常に5行を描画する(不足分は「-」「0」のプレースホルダーで埋める)。
+    // これにより読み込み前後で枠の高さが一切変わらない。
+    rows = rows || [];
     let marked = false;
-    el.innerHTML = rows.map((r, i) => {
-      const me = !marked && meName !== undefined && r.name === meName && r.score === meScore;
-      if (me) marked = true;
-      return `<div class="rb-row${me ? " me" : ""}"><span>${i + 1}位</span><b>${esc(String(r.name))}</b><span>${r.score}</span></div>`;
-    }).join("");
+    let html = "";
+    for (let i = 0; i < 5; i++) {
+      const r = rows[i];
+      if (r) {
+        const me = !marked && meName !== undefined && r.name === meName && r.score === meScore;
+        if (me) marked = true;
+        html += `<div class="rb-row${me ? " me" : ""}"><span>${i + 1}位</span>` +
+                `<b class="rb-nm">${esc(String(r.name))}</b><span>${r.score}</span></div>`;
+      } else {
+        html += `<div class="rb-row ph"><span>${i + 1}位</span>` +
+                `<b class="rb-nm">-</b><span>0</span></div>`;
+      }
+    }
+    el.innerHTML = html;
   }
 
   function loadSuddenRank(rankbox, score) {
     const el = rankbox.querySelector(".rb-body");
-    if (!STATS_URL) { el.textContent = "ランキングは準備中です"; return; }
+    const form = rankbox.querySelector(".rb-entry");  // 高さ確保済みの領域を使う
+    if (!STATS_URL) return;
     fetch(STATS_URL + "/rank").then((r) => r.json()).then((data) => {
       const rows = data.rows || [];
       renderRankRows(el, rows);
       const qualifies = score >= 1 &&
         (rows.length < 5 || score > rows[rows.length - 1].score);
-      if (!qualifies) return;
-      const form = $(`<div class="rb-entry"><b>TOP5入り!</b> 名前を入れて記録しよう(5文字まで)<br></div>`);
+      if (!qualifies) {
+        form.innerHTML = '<div class="rb-note">TOP5入りで名前を登録できます。<br>もう1回チャレンジ!</div>';
+        return;
+      }
+      form.innerHTML = "<b>TOP5入り!</b> 名前を入れて記録しよう(5文字まで)<br>";
       const input = $(`<input class="namein" maxlength="5" placeholder="なまえ">`);
       const saved = lsGet("wikilink-sudden-name");
       if (saved) input.value = saved;
@@ -554,14 +575,13 @@ if (typeof document !== "undefined") {
             renderRankRows(el, res.rows || [], name, score);
           })
           .catch(() => {
-            form.appendChild($(`<div>登録に失敗しました。時間をおいてもう一度どうぞ</div>`));
+            form.innerHTML = "登録に失敗しました。時間をおいてもう一度どうぞ";
             btn.disabled = false;
           });
       };
       form.appendChild(input);
       form.appendChild(btn);
-      rankbox.appendChild(form);
-    }).catch(() => { el.textContent = "ランキングを取得できませんでした"; });
+    }).catch(() => {});
   }
 
   function render() {
