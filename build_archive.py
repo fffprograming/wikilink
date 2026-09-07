@@ -348,17 +348,21 @@ def main():
     if until > yesterday:
         until = yesterday
         print("注意: ネタバレ防止のため昨日(日本時間)までに制限しました")
-    if since > until:
-        sys.exit(f"生成対象の日がありません (since={since} > until={until})。"
-                 "バンク公開の翌日以降に実行してください")
+    # 生成対象の新しい日が無くても、難問ランキング(index.html)は毎日更新したいので
+    # エラー終了はせず、日別生成をスキップして index/sitemap 再生成へ進む。
+    no_new_days = since > until
+    if no_new_days:
+        print(f"新しく生成する日はありません (since={since} > until={until})。"
+              "難問ランキングと一覧のみ更新します。")
 
     stats = None if args.no_stats else fetch_stats(args.stats_url)
 
     dates = []
-    d = since
-    while d <= until:
-        dates.append(d.isoformat())
-        d += datetime.timedelta(days=1)
+    if not no_new_days:
+        d = since
+        while d <= until:
+            dates.append(d.isoformat())
+            d += datetime.timedelta(days=1)
 
     # 既存ページ(過去バンク分)も一覧・サイトマップに含める
     existing = set()
