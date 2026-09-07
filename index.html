@@ -257,6 +257,12 @@ function jstToday(now) {
   const p = (x) => String(x).padStart(2, "0");
   return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate());
 }
+// 日本時間の「YYYY-MM-DD HH:MM」(ランキングのシェア文に載せる)
+function jstStamp(now) {
+  const d = new Date((now === undefined ? Date.now() : now) + 9 * 3600 * 1000);
+  const p = (x) => String(x).padStart(2, "0");
+  return jstToday(now) + " " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
+}
 function shuffleBySeed(seedStr, n, total) {
   const r = mulberry32(hashStr(seedStr));
   const a = [...Array(total).keys()];
@@ -324,9 +330,9 @@ function buildSuddenShareText(score, rank) {
   return t + "\n挑戦する → " + base + "/";
 }
 // ランキング閲覧画面からのシェア文
-function buildRankShareText(day, rows) {
+function buildRankShareText(stamp, rows) {
   const base = siteBase();
-  let t = "🔥 WikiLinkGame サドンデス 本日のTOP5\n(" + day + " 時点)\n";
+  let t = "🔥 WikiLinkGame サドンデス 本日のTOP5\n(" + stamp + " 時点)\n";
   if (rows && rows.length) {
     for (let i = 0; i < rows.length; i++) {
       // 同率順位に対応(5,5,5,2,2 → 1,1,1,4,4)
@@ -340,7 +346,7 @@ function buildRankShareText(day, rows) {
   return t + "挑戦する → " + base + "/";
 }
 if (typeof module !== "undefined") {
-  module.exports = { mulberry32, hashStr, jstToday, dailyIndices, randomIndices,
+  module.exports = { mulberry32, hashStr, jstToday, jstStamp, dailyIndices, randomIndices,
                      newSeed, buildShareText, buildRandomShareText, celebrationTier,
                      suddenComment, validName, buildSuddenShareText, buildRankShareText,
                      QUESTIONS, META, SITE_URL, STATS_URL, DAILY_N, RANDOM_N };
@@ -461,17 +467,17 @@ if (typeof document !== "undefined") {
     h.appendChild(share);
     h.appendChild(hb);
     card.appendChild(h);
-    // 最新ランキングを取得して反映
-    let cur = { day: jstToday(), rows: [] };
+    // 最新ランキングを取得して反映(stamp = 取得した時刻。シェア文と注記に使う)
+    let cur = { stamp: jstStamp(), rows: [] };
     share.onclick = () => {
-      const text = buildRankShareText(cur.day, cur.rows);
+      const text = buildRankShareText(cur.stamp, cur.rows);
       window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank", "noopener");
     };
     if (!STATS_URL) { note.textContent = "ランキングは準備中です"; return; }
     fetch(STATS_URL + "/rank").then((r) => r.json()).then((data) => {
-      cur = { day: data.day || jstToday(), rows: data.rows || [] };
+      cur = { stamp: jstStamp(), rows: data.rows || [] };
       renderRankRows(rankbox.querySelector(".rb-body"), cur.rows);
-      note.textContent = cur.rows.length ? (cur.day + " 時点") :
+      note.textContent = cur.rows.length ? (cur.stamp + " 時点") :
         "まだ記録がありません。最初の1位を狙おう!";
     }).catch(() => { note.textContent = "ランキングを取得できませんでした"; });
   }
