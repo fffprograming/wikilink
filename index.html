@@ -483,12 +483,51 @@ if (typeof document !== "undefined") {
   }
 
   // --- サドンデスモード(全問からランダム出題・デイリーランキング) ---
+  // 問題ID → QUESTIONS内インデックスの対応表(初回だけ構築してキャッシュ)
+  let _qidIndex = null;
+  function qidMap() {
+    if (!_qidIndex) {
+      _qidIndex = new Map();
+      QUESTIONS.forEach((q, i) => { if (q.id) _qidIndex.set(q.id, i); });
+    }
+    return _qidIndex;
+  }
+
+  // 1問目用の「やさしい問題」プール: 既出問題(daily/randomで回答あり)のうち
+  // 正答率が上位10%(最低5問)。/easy は正答率の高い順で返る。
+  function buildEasyPool(rows) {
+    const idx = qidMap();
+    const inBank = (rows || []).filter((r) => idx.has(r.q));
+    if (!inBank.length) return [];
+    const n = Math.max(5, Math.ceil(inBank.length * 0.10));
+    return inBank.slice(0, n).map((r) => idx.get(r.q));
+  }
+
   function startSudden() {
-    st = { mode: "sudden", used: new Set(), score: 0, rank: null };
-    renderSudden();
+    st = { mode: "sudden", used: new Set(), score: 0, rank: null, easyPool: null };
+    if (STATS_URL) {
+      card.innerHTML = "";
+      card.appendChild($(`<div class="home"><p>準備中…</p></div>`));
+      // 1問目をやさしくするためのプールを取得(失敗しても通常出題で続行)
+      fetch(STATS_URL + "/easy").then((r) => r.json()).then((data) => {
+        st.easyPool = buildEasyPool(data.rows);
+        renderSudden();
+      }).catch(() => renderSudden());
+    } else {
+      renderSudden();
+    }
   }
 
   function nextSuddenQ() {
+    // 1問目: やさしい問題プールから(あれば)。2問目以降は全問からランダム。
+    if (st.used.size === 0 && st.easyPool && st.easyPool.length) {
+      const pool = st.easyPool.filter((i) => !st.used.has(i));
+      if (pool.length) {
+        const i = pool[Math.floor(Math.random() * pool.length)];
+        st.used.add(i);
+        return QUESTIONS[i];
+      }
+    }
     if (st.used.size >= QUESTIONS.length) return null;
     let i;
     do { i = Math.floor(Math.random() * QUESTIONS.length); } while (st.used.has(i));
