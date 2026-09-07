@@ -1,0 +1,46 @@
+name: Daily archive & difficulty ranking
+
+# 毎日 00:10 JST(= 15:10 UTC)に自動実行。手動実行も可。
+on:
+  schedule:
+    - cron: '10 15 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-archive
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate archive & difficulty ranking
+        run: |
+          python3 build_archive.py \
+            --questions-json index.questions.json \
+            --since 2026-09-07 \
+            --stats-url https://wikilink-stats.top-of-the-fujii.workers.dev \
+            --site-dir .
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add archive sitemap.xml
+          if git diff --cached --quiet; then
+            echo "変更なし(生成対象の新しい日がない/内容に差分なし)"
+          else
+            git commit -m "Auto: daily archive & difficulty ranking ($(TZ=Asia/Tokyo date +%F))"
+            git push
+          fi
