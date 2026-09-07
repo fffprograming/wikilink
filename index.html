@@ -327,10 +327,12 @@ function buildSuddenShareText(score, rank) {
 function buildRankShareText(day, rows) {
   const base = siteBase();
   let t = "🔥 WikiLinkGame サドンデス 本日のTOP5\n(" + day + " 時点)\n";
-  const medal = ["🥇", "🥈", "🥉", "4.", "5."];
   if (rows && rows.length) {
     for (let i = 0; i < rows.length; i++) {
-      t += medal[i] + " " + rows[i].name + " … " + rows[i].score + "\n";
+      // 同率順位に対応(5,5,5,2,2 → 1,1,1,4,4)
+      let rank = 1;
+      for (let j = 0; j < rows.length; j++) if (rows[j].score > rows[i].score) rank++;
+      t += rank + "位 " + rows[i].name + " … " + rows[i].score + "\n";
     }
   } else {
     t += "まだ記録なし。初代1位を狙おう!\n";
@@ -573,6 +575,15 @@ if (typeof document !== "undefined") {
     loadSuddenRank(rankbox, n);
   }
 
+  // 同率順位(競技ランキング方式): 自分より高いスコアの人数 + 1。
+  // 例) 5,5,5,2,2 → 1,1,1,4,4。rows は取得済みの上位5件で、
+  // あるスコアより高い人は必ずこの中にいるため、この中だけで正しく数えられる。
+  function rankOf(rows, score) {
+    let rank = 1;
+    for (let j = 0; j < rows.length; j++) if (rows[j].score > score) rank++;
+    return rank;
+  }
+
   function renderRankRows(el, rows, meName, meScore) {
     // 常に5行を描画する(不足分は「-」「0」のプレースホルダーで埋める)。
     // これにより読み込み前後で枠の高さが一切変わらない。
@@ -584,7 +595,7 @@ if (typeof document !== "undefined") {
       if (r) {
         const me = !marked && meName !== undefined && r.name === meName && r.score === meScore;
         if (me) marked = true;
-        html += `<div class="rb-row${me ? " me" : ""}"><span>${i + 1}位</span>` +
+        html += `<div class="rb-row${me ? " me" : ""}"><span>${rankOf(rows, r.score)}位</span>` +
                 `<b class="rb-nm">${esc(String(r.name))}</b><span>${r.score}</span></div>`;
       } else {
         html += `<div class="rb-row ph"><span>${i + 1}位</span>` +
@@ -621,11 +632,15 @@ if (typeof document !== "undefined") {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ score: score, name: name }) })
           .then((r) => r.json()).then((res) => {
-            st.rank = res.rank || null;
-            form.innerHTML = res.rank
-              ? `<b>🎊 本日 ${res.rank} 位にランクイン!</b>`
+            const rows = res.rows || [];
+            // 同率対応の順位を、返ってきたTOP5から自前で算出(表示と一致させる)
+            const inTop = rows.some((x) => x.name === name && x.score === score);
+            const myRank = inTop ? rankOf(rows, score) : (res.rank || null);
+            st.rank = myRank;
+            form.innerHTML = myRank
+              ? `<b>🎊 本日 ${myRank} 位にランクイン!</b>`
               : "登録しました!";
-            renderRankRows(el, res.rows || [], name, score);
+            renderRankRows(el, rows, name, score);
           })
           .catch(() => {
             form.innerHTML = "登録に失敗しました。時間をおいてもう一度どうぞ";
