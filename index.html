@@ -323,10 +323,24 @@ function buildSuddenShareText(score, rank) {
             : ("スコア " + score + "(" + score + "問連続正解)");
   return t + "\n挑戦する → " + base + "/";
 }
+// ランキング閲覧画面からのシェア文
+function buildRankShareText(day, rows) {
+  const base = siteBase();
+  let t = "🔥 WikiLinkGame サドンデス 本日のTOP5\n(" + day + " 時点)\n";
+  const medal = ["🥇", "🥈", "🥉", "4.", "5."];
+  if (rows && rows.length) {
+    for (let i = 0; i < rows.length; i++) {
+      t += medal[i] + " " + rows[i].name + " … " + rows[i].score + "\n";
+    }
+  } else {
+    t += "まだ記録なし。初代1位を狙おう!\n";
+  }
+  return t + "挑戦する → " + base + "/";
+}
 if (typeof module !== "undefined") {
   module.exports = { mulberry32, hashStr, jstToday, dailyIndices, randomIndices,
                      newSeed, buildShareText, buildRandomShareText, celebrationTier,
-                     suddenComment, validName, buildSuddenShareText,
+                     suddenComment, validName, buildSuddenShareText, buildRankShareText,
                      QUESTIONS, META, SITE_URL, STATS_URL, DAILY_N, RANDOM_N };
 }
 
@@ -398,9 +412,12 @@ if (typeof document !== "undefined") {
     rb.onclick = () => startRandom();
     const sb = $(`<button class="btn sub show">🔥 サドンデス<br><span class="daily-date">全問からランダム出題 ・ 間違えたら即終了 ・ 本日のTOP5に挑め!</span></button>`);
     sb.onclick = () => startSudden();
+    const lb = $(`<button class="btn sub show">📊 本日のTOP5(サドンデス)</button>`);
+    lb.onclick = () => showRanking();
     modes.appendChild(db);
     modes.appendChild(rb);
     modes.appendChild(sb);
+    modes.appendChild(lb);
     h.appendChild(modes);
     h.appendChild($(`<p style="font-size:12px">全 ${QUESTIONS.length.toLocaleString()} 問収録 ・ 完全無料</p>`));
     h.appendChild($(`<p style="font-size:12px"><a href="about.html" style="color:#2f6fde">遊び方</a> ・ <a href="faq.html" style="color:#2f6fde">よくある質問</a> ・ <a href="columns.html" style="color:#2f6fde">コラム</a></p>`));
@@ -419,6 +436,42 @@ if (typeof document !== "undefined") {
            order: randomIndices(seed, RANDOM_N, QUESTIONS.length),
            pos: 0, good: 0, marks: [] };
     render();
+  }
+
+  // --- 本日のTOP5(サドンデス)閲覧画面 ---
+  function showRanking() {
+    st = null;
+    scoreEl.textContent = "";
+    card.innerHTML = "";
+    const h = $(`<div class="home"></div>`);
+    h.appendChild($(`<p>🔥 サドンデス 本日のランキング</p>`));
+    const rankbox = $(`<div class="rankbox"><div class="rb-title">🏆 本日のTOP5(24時リセット)</div><div class="rb-body"></div></div>`);
+    renderRankRows(rankbox.querySelector(".rb-body"), []);  // 先に5枠を描画(高さ固定)
+    h.appendChild(rankbox);
+    const note = $(`<p style="font-size:12px" class="rk-note">読み込み中…</p>`);
+    h.appendChild(note);
+    const play = $(`<button class="btn show">🔥 サドンデスに挑戦する</button>`);
+    play.onclick = () => startSudden();
+    const share = $(`<button class="btn x show">現時点のランキングを X でシェア</button>`);
+    const hb = $(`<button class="btn sub show">トップに戻る</button>`);
+    hb.onclick = home;
+    h.appendChild(play);
+    h.appendChild(share);
+    h.appendChild(hb);
+    card.appendChild(h);
+    // 最新ランキングを取得して反映
+    let cur = { day: jstToday(), rows: [] };
+    share.onclick = () => {
+      const text = buildRankShareText(cur.day, cur.rows);
+      window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank", "noopener");
+    };
+    if (!STATS_URL) { note.textContent = "ランキングは準備中です"; return; }
+    fetch(STATS_URL + "/rank").then((r) => r.json()).then((data) => {
+      cur = { day: data.day || jstToday(), rows: data.rows || [] };
+      renderRankRows(rankbox.querySelector(".rb-body"), cur.rows);
+      note.textContent = cur.rows.length ? (cur.day + " 時点") :
+        "まだ記録がありません。最初の1位を狙おう!";
+    }).catch(() => { note.textContent = "ランキングを取得できませんでした"; });
   }
 
   // --- サドンデスモード(全問からランダム出題・デイリーランキング) ---
