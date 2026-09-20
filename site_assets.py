@@ -26,6 +26,7 @@ def write_game_assets(page, out_path, ad_code=''):
   async function start() {
     if (loading) return;
     loading = true; button.disabled = true;
+    document.querySelector('.intro').hidden = true;
     status.textContent = '問題データを読み込んでいます…';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
