@@ -257,6 +257,8 @@
     window.WLG_START_MODE = mode;
     const intro = document.querySelector('.intro');
     if (intro) intro.hidden = true;
+    const homeContent = document.querySelector('.static');
+    if (homeContent) homeContent.hidden = true;
     status.textContent = '問題データを読み込んでいます…';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
@@ -268,7 +270,7 @@
       window.WLG_QUESTIONS = bank;
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = "assets/game-4370fd5c13ba.js";
+        script.src = "assets/game-d832ebd3c98c.js";
         const scriptTimer = setTimeout(() => {
           script.remove(); reject(new Error('ゲーム本体の読み込みが時間切れになりました'));
         }, 30000);
@@ -286,6 +288,7 @@
       delete window.WLG_QUESTIONS;
       document.getElementById('card').focus();
     } catch (error) {
+      if (homeContent) homeContent.hidden = false;
       status.textContent = '読み込めませんでした。' + (error.name === 'AbortError' ? '通信が時間切れになりました。' : error.message + '。') + '通信を確認し、遊びたいモードをもう一度選んでください。';
       buttons.forEach(button => { button.disabled = false; }); loading = false;
     } finally { clearTimeout(timer); }
