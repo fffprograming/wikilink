@@ -172,8 +172,12 @@
 <div class="card" id="card" tabindex="-1">
 <h2 style="font-size:18px;margin-top:0">今日の10問に挑戦しよう</h2>
 <p style="font-size:14px;line-height:1.9">日替わり・ランダム・サドンデスの3モード。会員登録不要、無料で遊べます。</p>
-<button class="btn show" id="load-game">ゲームを読み込む</button>
-<p id="load-status" role="status" style="font-size:13px;line-height:1.8">問題データは開始時に読み込みます。</p>
+<div class="modes" id="initial-modes">
+<button class="btn show" data-start-mode="daily">今日の10問（日替わり）</button>
+<button class="btn sub show" data-start-mode="random">ランダム10問</button>
+<button class="btn sub show" data-start-mode="sudden">サドンデス</button>
+</div>
+<p id="load-status" role="status" style="font-size:13px;line-height:1.8">遊びたいモードを選ぶと始まります。</p>
 <a class="learn-link" href="learn.html">初めての方へ：解説付きの3問を試す →</a>
 <noscript><p>本編のゲームには JavaScript が必要です。<a href="learn.html">解説付き練習</a>は JavaScript なしでも答えと考え方を読めます。</p></noscript>
 </div>
@@ -247,12 +251,13 @@
 </footer>
 <script>
 (function () {
-  const button = document.getElementById('load-game');
+  const buttons = Array.from(document.querySelectorAll('[data-start-mode]'));
   const status = document.getElementById('load-status');
   let loading = false;
-  async function start() {
+  async function start(mode) {
     if (loading) return;
-    loading = true; button.disabled = true;
+    loading = true; buttons.forEach(button => { button.disabled = true; });
+    window.WLG_START_MODE = mode;
     const intro = document.querySelector('.intro');
     if (intro) intro.hidden = true;
     status.textContent = '問題データを読み込んでいます…';
@@ -266,13 +271,13 @@
       window.WLG_QUESTIONS = bank;
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = "assets/game-99e9e73f4016.js";
+        script.src = "assets/game-4370fd5c13ba.js";
         const scriptTimer = setTimeout(() => {
           script.remove(); reject(new Error('ゲーム本体の読み込みが時間切れになりました'));
         }, 30000);
         script.onload = () => {
           clearTimeout(scriptTimer);
-          if (document.getElementById('load-game')) reject(new Error('ゲーム本体を起動できませんでした'));
+          if (document.getElementById('initial-modes')) reject(new Error('ゲーム本体を起動できませんでした'));
           else resolve();
         };
         script.onerror = () => {
@@ -284,12 +289,12 @@
       delete window.WLG_QUESTIONS;
       document.getElementById('card').focus();
     } catch (error) {
-      status.textContent = '読み込めませんでした。' + (error.name === 'AbortError' ? '通信が時間切れになりました。' : error.message + '。') + '通信を確認して再試行してください。公開直後の場合は assets フォルダのアップロードも確認してください。';
-      button.textContent = 'もう一度読み込む'; button.disabled = false; loading = false;
+      status.textContent = '読み込めませんでした。' + (error.name === 'AbortError' ? '通信が時間切れになりました。' : error.message + '。') + '通信を確認し、遊びたいモードをもう一度選んでください。';
+      buttons.forEach(button => { button.disabled = false; }); loading = false;
     } finally { clearTimeout(timer); }
   }
-  button.addEventListener('click', start);
-  if (new URLSearchParams(location.search).get('r')) start();
+  buttons.forEach(button => button.addEventListener('click', () => start(button.dataset.startMode)));
+  if (new URLSearchParams(location.search).get('r')) start('random');
 })();
 </script>
 </body>
