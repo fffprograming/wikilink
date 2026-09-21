@@ -245,6 +245,52 @@
   <a href="https://donate.wikimedia.org/?uselang=ja" target="_blank" rel="noopener">Wikipedia への寄付はこちら</a><br>
   運営者: <a href="operator.html">株式会社FuzzyBase</a> ・ お問い合わせ: info@fuzzybase.jp
 </footer>
-<script src="assets/loader-7c06e32f88ec.js" defer></script>
+<script>
+(function () {
+  const button = document.getElementById('load-game');
+  const status = document.getElementById('load-status');
+  let loading = false;
+  async function start() {
+    if (loading) return;
+    loading = true; button.disabled = true;
+    const intro = document.querySelector('.intro');
+    if (intro) intro.hidden = true;
+    status.textContent = '問題データを読み込んでいます…';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch("assets/questions-6e7da983973a.json", {signal:controller.signal});
+      if (!response.ok) throw new Error('問題データの取得に失敗しました（HTTP ' + response.status + '）');
+      const bank = await response.json();
+      if (!Array.isArray(bank) || !bank.length) throw new Error('Empty bank');
+      window.WLG_QUESTIONS = bank;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = "assets/game-99e9e73f4016.js";
+        const scriptTimer = setTimeout(() => {
+          script.remove(); reject(new Error('ゲーム本体の読み込みが時間切れになりました'));
+        }, 30000);
+        script.onload = () => {
+          clearTimeout(scriptTimer);
+          if (document.getElementById('load-game')) reject(new Error('ゲーム本体を起動できませんでした'));
+          else resolve();
+        };
+        script.onerror = () => {
+          clearTimeout(scriptTimer); script.remove();
+          reject(new Error('ゲーム本体のファイルを取得できませんでした'));
+        };
+        document.body.appendChild(script);
+      });
+      delete window.WLG_QUESTIONS;
+      document.getElementById('card').focus();
+    } catch (error) {
+      status.textContent = '読み込めませんでした。' + (error.name === 'AbortError' ? '通信が時間切れになりました。' : error.message + '。') + '通信を確認して再試行してください。公開直後の場合は assets フォルダのアップロードも確認してください。';
+      button.textContent = 'もう一度読み込む'; button.disabled = false; loading = false;
+    } finally { clearTimeout(timer); }
+  }
+  button.addEventListener('click', start);
+  if (new URLSearchParams(location.search).get('r')) start();
+})();
+</script>
 </body>
 </html>
